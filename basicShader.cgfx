@@ -1,0 +1,67 @@
+/*
+
+This is a basic shader, it takes the bare minimum inputs and only outputs a plain color.
+
+*/
+
+// CGFX MATRICES SECTION
+
+float4x4 WorldViewProjection     : WorldViewProjection   < string UIWidget = "None"; >;
+
+
+// Maya's CGFX Shader description
+string description = "A Basic Shader";
+
+
+// Parameters
+float3 shaderColor : Diffuse
+<
+	string UIName = "Shader Color";
+> = {1.0f, 1.0f, 1.0f};
+
+
+// STRUCTS SECTION
+
+// input from application into the vertex shader
+struct a2v {
+	float4 position  : POSITION;
+};
+
+
+// output to pixel/fragment shader
+struct v2f {
+        float4 position        : POSITION;
+};
+
+
+// METHODS SECTION
+
+// Vertex Shader 
+v2f vShader(a2v In)
+{
+    v2f Out;
+	
+	// puts the position into screen space 
+    Out.position = mul(WorldViewProjection, In.position);
+    
+	return Out;
+}
+
+// Pixel Shader 
+float4 pShader(v2f In) : COLOR
+{
+	float4 outColor = float4(shaderColor,1);
+	return outColor;
+}
+
+
+// TECHNIQUES SECTION
+
+technique Opaque
+{
+    pass one
+    {
+		VertexShader = compile vp30 vShader();
+		PixelShader = compile fp30 pShader();
+    }
+}
