@@ -1,0 +1,93 @@
+/*
+
+Lambert shader
+
+Result =(L·N)*C
+
+L = normalized light direction vector
+N = normalized World Normal vector
+C = color
+
+*/
+
+// CGFX MATRICES SECTION
+
+float4x4 WorldViewProjection     : WorldViewProjection   < string UIWidget = "None"; >;
+float4x4 WorldInverseTranspose   : WorldInverseTranspose < string UIWidget = "None"; >;
+float4x4 ViewInverse             : ViewInverse           < string UIWidget = "None"; >;
+float4x4 World                   : World                 < string UIWidget = "None"; >;
+
+
+// Maya's CGFX Shader description
+string description = "Lambert Shader";
+
+
+// Parameters
+float3 shaderColor : Diffuse
+<
+	string UIName = "Shader Color";
+> = {1.0f, 1.0f, 1.0f};
+
+float3 lightDirection : Direction
+<
+	string UIName = "Light Direction";
+> = {0.0f, 1.0f, 0.0f};
+
+
+// STRUCTS SECTION
+
+// input from application
+struct a2v {
+	float4 position  : POSITION;
+	float4 normal    : NORMAL;
+};
+
+
+// output to pixel/fragment program
+struct v2f {
+        float4 position        : POSITION;
+		float3 worldNormal     : TEXCOORD0;
+};
+
+
+// PROGRAM SECTION
+
+// Vertex Shader 
+v2f vShader(a2v In)
+{
+    v2f Out;
+	
+    Out.position = mul(WorldViewProjection, In.position);
+	Out.worldNormal = mul(WorldInverseTranspose, In.normal).xyz;
+	
+    return Out;
+}
+
+// Pixel Shader 
+float4 pShader(v2f In) : COLOR
+{
+	float4 outColor;
+	
+	float3 worldNormal = normalize(In.worldNormal);
+	float3 lightDir = normalize(-lightDirection);  // minus to floping to the light direction
+	
+	float3 lambert = saturate(dot(lightDir, worldNormal));
+	
+	outColor.rgb = lambert * shaderColor;
+	outColor.a = 1.0f;
+	
+	
+	return outColor;
+}
+
+
+// TECHNIQUES SECTION
+
+technique Simple
+{
+    pass one
+    {
+		VertexShader = compile vp30 vShader();
+		PixelShader = compile fp30 pShader();
+    }
+}
