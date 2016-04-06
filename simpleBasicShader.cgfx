@@ -1,6 +1,6 @@
 /*
 
-This is a basic shader, it takes the bare minimum inputs and only outputs a plain color.
+This is a simple basic shader, it takes the bare minimum inputs and only outputs a plain color.
 
 */
 
@@ -10,7 +10,7 @@ float4x4 WorldViewProjection     : WorldViewProjection   < string UIWidget = "No
 
 
 // Maya's CGFX Shader description
-string description = "A Basic Shader";
+string description = "A Simple Basic Shader";
 
 
 // Parameters
@@ -34,7 +34,7 @@ struct v2f {
 };
 
 
-// METHODS SECTION
+// PROGRAM SECTION
 
 // Vertex Shader 
 v2f vShader(a2v In)
