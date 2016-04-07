@@ -1,5 +1,4 @@
-# maya-shaders
-Maya CGFX shaders
+# Maya CGFX shaders
 
 Simpliest shader:
 - simpleBasicShader.cgfx
