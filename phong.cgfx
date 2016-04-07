@@ -37,7 +37,7 @@ float4x4 World                   : World                 < string UIWidget = "No
 
 
 // Maya's CGFX Shader description
-string description = "Fresnel Shader";
+string description = "Phong Shader";
 
 
 // Parameters
