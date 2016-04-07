@@ -9,3 +9,5 @@ Progression of shaders taken the lambert shader as base:
 - lambert_ambient.cgfx
 - fresnel.cgfx
 - phong.cgfx
+- diffuse_mapped.cgfx
+- diffuse_specular_mapped.cgfx
