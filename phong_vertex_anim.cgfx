@@ -1,0 +1,160 @@
+/*
+
+Phong vertex animation shader
+
+*/
+
+// CGFX MATRICES SECTION
+
+float4x4 WorldViewProjection     : WorldViewProjection   < string UIWidget = "None"; >;
+float4x4 WorldInverseTranspose   : WorldInverseTranspose < string UIWidget = "None"; >;
+float4x4 ViewInverse             : ViewInverse           < string UIWidget = "None"; >;
+float4x4 World                   : World                 < string UIWidget = "None"; >;
+
+
+// Maya's CGFX Shader description
+string description = "Phong Shader";
+
+
+// Parameters
+float3 shaderColor : Diffuse
+<
+	string UIName = "Shader Color";
+> = {1.0f, 1.0f, 1.0f};
+
+float3 lightDirection : Direction
+<
+	string UIName = "Light Direction";
+> = {0.0f, 1.0f, 0.0f};
+
+float3 ambientColor : Diffuse
+<
+	string UIName = "Ambient Color";
+> = {0.20f, 0.20f, 0.20f};
+
+float fresnelPower 
+<
+	string UIWidget = "slider";
+	string UIName = "Fresnel Power";
+	float UIMin = 0.0f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 2.5f;
+
+float specularPower 
+<
+	string UIWidget = "slider";
+	string UIName = "Specular Power";
+	float UIMin = 0.1f;
+	float UIMax = 100.0f;
+	float UIStep = 0.01f;
+	
+> = 30.0f;
+
+float3 specularColor : Diffuse
+<
+	string UIName = "Specular Color";
+> = {1.0f, 1.0f, 1.0f};
+
+float3 vertOffset
+<
+	string UIName = "Vertex Offset";
+> = {0.0f, 0.0f, 0.0f};
+
+float animationFrequency 
+<
+	string UIWidget = "slider";
+	string UIName = "Animation Frequency";
+	float UIMin = 0.1f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 1.0f;
+
+float animationSpeed
+<
+	string UIWidget = "slider";
+	string UIName = "Animation Speed";
+	float UIMin = 0.1f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 1.0f;
+
+float time : Time;
+
+// STRUCTS SECTION
+
+// input from application
+struct a2v {
+	float4 position  : POSITION;
+	float4 normal    : NORMAL;
+};
+
+
+// output to pixel/fragment program
+struct v2f {
+        float4 position        : POSITION;
+		float3 worldNormal     : TEXCOORD0;
+		float3 eyeVector	   : TEXCOORD1;
+};
+
+
+// PROGRAM SECTION
+
+// Vertex Shader 
+v2f vShader(a2v In)
+{
+    v2f Out;
+	
+	float4 deformedPosition = In.position;
+	
+	deformedPosition.xyz = deformedPosition.xyz + (sin(time * animationSpeed + In.position.x * animationFrequency) * vertOffset );
+	
+    Out.position = mul(WorldViewProjection, deformedPosition);
+	Out.worldNormal = mul(WorldInverseTranspose, In.normal).xyz;
+	
+	float3 worldSpacePos = mul(World, In.position);
+	float3 worldCameraPos = float3(ViewInverse[0].w, ViewInverse[1].w, ViewInverse[2].w); 
+	Out.eyeVector = worldCameraPos - worldSpacePos;
+	
+    return Out;
+}
+
+// Pixel Shader 
+float4 pShader(v2f In) : COLOR
+{
+	float4 outColor;
+	
+	float3 worldNormal = normalize(In.worldNormal);
+	float3 lightDir = normalize(-lightDirection);  // minus to floping to the light direction
+	float3 eyeVector = normalize(In.eyeVector);
+	
+	float3 reflectionVector = -reflect(eyeVector, worldNormal);
+	
+	float3 specular = pow(saturate(dot(reflectionVector, lightDir)), specularPower) * specularColor;
+	
+	float3 lambert = saturate(dot(lightDir, worldNormal));
+	
+	float3 fresnel = pow(1- saturate(dot(eyeVector, worldNormal)), fresnelPower) * lambert;
+	
+	outColor.rgb = (lambert + ambientColor) * shaderColor + fresnel + specular ;
+
+	outColor.a = 1.0f;
+	
+	
+	return outColor;
+}
+
+
+// TECHNIQUES SECTION
+
+technique Simple
+{
+    pass one
+    {
+		VertexShader = compile vp30 vShader();
+		PixelShader = compile fp30 pShader();
+    }
+}
