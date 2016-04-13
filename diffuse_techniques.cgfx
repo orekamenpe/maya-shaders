@@ -1,0 +1,239 @@
+/*
+
+Techniques shader
+
+AlphaBlend - expensive
+AlphaTest - used for hair
+Additive - XRay trick
+
+*/
+
+// CGFX MATRICES SECTION
+
+float4x4 WorldViewProjection     : WorldViewProjection   < string UIWidget = "None"; >;
+float4x4 WorldInverseTranspose   : WorldInverseTranspose < string UIWidget = "None"; >;
+float4x4 ViewInverse             : ViewInverse           < string UIWidget = "None"; >;
+float4x4 World                   : World                 < string UIWidget = "None"; >;
+
+
+// Maya's CGFX Shader description
+string description = "Techniques Shader";
+
+
+// Parameters
+float3 shaderColor : Diffuse
+<
+	string UIName = "Shader Color";
+> = {1.0f, 1.0f, 1.0f};
+
+float3 lightDirection : Direction
+<
+	string UIName = "Light Direction";
+> = {0.0f, 1.0f, 0.0f};
+
+float3 ambientColor : Diffuse
+<
+	string UIName = "Ambient Color";
+> = {0.20f, 0.20f, 0.20f};
+
+float fresnelPower 
+<
+	string UIWidget = "slider";
+	string UIName = "Fresnel Power";
+	float UIMin = 0.0f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 2.5f;
+
+float specularPower 
+<
+	string UIWidget = "slider";
+	string UIName = "Specular Power";
+	float UIMin = 0.1f;
+	float UIMax = 100.0f;
+	float UIStep = 0.01f;
+	
+> = 30.0f;
+
+float3 specularColor : Diffuse
+<
+	string UIName = "Specular Color";
+> = {1.0f, 1.0f, 1.0f};
+
+// TEXTURES
+// Diffuse
+texture diffuseTexure
+<
+	string name = "default_color.dds";
+	string UIName = "Diffuse Texture";
+	string TextureType = "2D";
+>;
+
+sampler2D diffuseMap = sampler_state
+{
+	Texture       = <diffuseTexure>;
+    AddressU      = Wrap;
+    AddressV      = Wrap;
+};
+
+// Spec 
+texture specTexture
+<
+    string name = "default_color.dds";
+    string UIName = "Specular Texture";
+    string TextureType = "2D";
+>;
+
+sampler2D specMap = sampler_state
+{
+    Texture = <specTexture>;
+    AddressU      = Wrap;
+    AddressV      = Wrap;
+};
+
+// Normal 
+texture normalTexture
+<
+    string name = "default_color.dds";
+    string UIName = "Normal Texture";
+    string TextureType = "2D";
+>;
+
+sampler2D normalMap = sampler_state
+{
+    Texture = <normalTexture>;
+    AddressU      = Wrap;
+    AddressV      = Wrap;
+};
+
+// STRUCTS SECTION
+
+// input from application
+struct a2v {
+	float4 position  : POSITION;
+	float2 texCoord  : TEXCOORD0; // possible optimization pack on a float4 
+	float4 normal    : NORMAL;
+	float4 binormal  : BINORMAL;
+	float4 tangent    : TANGENT;
+};
+
+
+// output to pixel/fragment program
+struct v2f {
+        float4 position        : POSITION;
+		float2 texCoord        : TEXCOORD0;
+		float3 worldNormal     : TEXCOORD1;
+		float3 worldBinormal   : TEXCOORD2;
+		float3 worldTangent    : TEXCOORD3;
+		float3 eyeVector	   : TEXCOORD4;
+};
+
+
+// PROGRAM SECTION
+
+// Vertex Shader 
+v2f vShader(a2v In)
+{
+    v2f Out;
+	
+    Out.position = mul(WorldViewProjection, In.position);
+	
+	Out.worldNormal = mul(WorldInverseTranspose, In.normal).xyz;
+	Out.worldBinormal = mul(WorldInverseTranspose, In.binormal).xyz;
+	Out.worldTangent = mul(WorldInverseTranspose, In.tangent).xyz;
+	
+	float3 worldSpacePos = mul(World, In.position);
+	float3 worldCameraPos = float3(ViewInverse[0].w, ViewInverse[1].w, ViewInverse[2].w); 
+	Out.eyeVector = worldCameraPos - worldSpacePos;
+	
+	Out.texCoord = In.texCoord;
+	
+    return Out;
+}
+
+// Pixel Shader 
+float4 pShader(v2f In) : COLOR
+{
+	float4 outColor;
+	
+	float3 worldNormal = tex2D(normalMap, In.texCoord) * 2 - 1;
+	worldNormal = normalize((worldNormal.x * In.worldTangent) + (worldNormal.y * In.worldBinormal) + (worldNormal.z*In.worldNormal));
+	
+	
+	float3 lightDir = normalize(-lightDirection);  // minus to floping to the light direction
+	float3 eyeVector = normalize(In.eyeVector);
+	
+	float4 colorMap = tex2D(diffuseMap, In.texCoord);
+	float4 specularMap = tex2D(specMap, In.texCoord);
+	
+	float3 reflectionVector = -reflect(eyeVector, worldNormal);
+	
+	float3 specular = pow(saturate(dot(reflectionVector, lightDir)), specularPower) * specularColor;
+	
+	float3 lambert = saturate(dot(lightDir, worldNormal));
+	
+	float3 fresnel = pow(1- saturate(dot(eyeVector, worldNormal)), fresnelPower);
+	
+	float3 finalSpecular = (fresnel * specularMap.r) + ( specular * specularMap.g);
+	
+	outColor.rgb = (lambert + ambientColor) * (shaderColor * colorMap.rgb) + finalSpecular;
+
+	outColor.a = fresnel;
+		
+	return outColor;
+}
+
+
+// TECHNIQUES SECTION
+
+technique Opaque
+{
+    pass one
+    {
+		VertexShader = compile vp30 vShader();
+		PixelShader = compile fp30 pShader();
+    }
+}
+
+technique AlphaBlend
+{
+    pass one
+    {
+		
+		AlphaBlendEnable = True;
+		FrontFace = CCW;
+		CullFaceEnable = True;
+		
+		VertexShader = compile vp30 vShader();
+		PixelShader = compile fp30 pShader();
+    }
+}
+
+technique AlphaTest
+{
+    pass one
+    {
+		AlphaFunc = float2(GREATER, .3);
+		AlphaTestEnable = True;
+		FrontFace = CCW;
+		CullFaceEnable = True;
+		VertexShader = compile vp40 vShader();
+		PixelShader = compile fp40 pShader();
+    }
+}
+
+technique Additive
+{
+    pass one
+    {
+	
+		AlphaBlendEnable = True;
+		BlendFunc = int2(SrcAlpha, One );
+		FrontFace = CCW;
+		CullFaceEnable = True;
+		VertexShader = compile vp40 vShader();
+		PixelShader = compile fp40 pShader();
+    }
+}
+
