@@ -17,3 +17,4 @@ Progression of shaders taken the lambert shader as base:
 - diffuse_normal_vertex_anim.cgfx
 - phong_vertex_anim.cgfx
 - diffuse_techniques.cgfx
+- blended.cgfx
