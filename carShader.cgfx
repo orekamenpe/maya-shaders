@@ -1,0 +1,203 @@
+/*
+
+Car shader
+
+How to create DDS files
+http://www.cgtextures.com/content.php?action=tutorial&name=cubemaps
+
+*/
+
+// CGFX MATRICES SECTION
+
+float4x4 WorldViewProjection     : WorldViewProjection   < string UIWidget = "None"; >;
+float4x4 WorldInverseTranspose   : WorldInverseTranspose < string UIWidget = "None"; >;
+float4x4 ViewInverse             : ViewInverse           < string UIWidget = "None"; >;
+float4x4 World                   : World                 < string UIWidget = "None"; >;
+
+
+// Maya's CGFX Shader description
+string description = "Diffuse Cubemapped Shader";
+
+
+// Parameters
+float3 shaderColor : Diffuse
+<
+	string UIName = "Shader Color";
+> = {1.0f, 1.0f, 1.0f};
+
+float3 lightDirection : Direction
+<
+	string UIName = "Light Direction";
+> = {0.0f, 1.0f, 0.0f};
+
+float3 ambientColor : Diffuse
+<
+	string UIName = "Ambient Color";
+> = {0.20f, 0.20f, 0.20f};
+
+float fresnelPower 
+<
+	string UIWidget = "slider";
+	string UIName = "Fresnel Power";
+	float UIMin = 0.0f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 2.5f;
+
+float specularPower 
+<
+	string UIWidget = "slider";
+	string UIName = "Specular Power";
+	float UIMin = 0.1f;
+	float UIMax = 100.0f;
+	float UIStep = 0.01f;
+	
+> = 30.0f;
+
+float3 specularColor : Diffuse
+<
+	string UIName = "Specular Color";
+> = {1.0f, 1.0f, 1.0f};
+
+float specularPower2 
+<
+	string UIWidget = "slider";
+	string UIName = "Specular Power2";
+	float UIMin = 0.1f;
+	float UIMax = 100.0f;
+	float UIStep = 0.01f;
+	
+> = 30.0f;
+
+float3 specularColor2 : Diffuse
+<
+	string UIName = "Specular Color2";
+> = {1.0f, 1.0f, 1.0f};
+
+
+float fresnelIntensity
+<
+	string UIWidget = "slider";
+	string UIName = "Fresnel Intensity";
+	float UIMin = 0.0f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 1.0f;
+
+float fresnelOffset
+<
+	string UIWidget = "slider";
+	string UIName = "Fresnel Offset";
+	float UIMin = 0.0f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 0.0f;
+
+float reflectionContrast
+<
+	string UIWidget = "slider";
+	string UIName = "Reflection Contrast";
+	float UIMin = 0.0f;
+	float UIMax = 10.0f;
+	float UIStep = 0.01f;
+	
+> = 1.0f;
+
+
+// TEXTURES
+texture reflectionTexture
+<
+	string name = "default_cube.dds";
+	string UIName = "Reflection Texture";
+	string ResourceType = "Cube";
+>;
+
+samplerCUBE reflectionMap = sampler_state
+{
+	Texture       = <reflectionTexture>;
+	WrapR 		  = ClampToEdge;
+	WrapS 		  = ClampToEdge;
+	WrapT 		  = ClampToEdge;
+
+};
+
+
+// STRUCTS SECTION
+
+// input from application
+struct a2v {
+	float4 position  : POSITION;
+	float2 texCoord  : TEXCOORD0;
+	float4 normal    : NORMAL;
+};
+
+
+// output to pixel/fragment program
+struct v2f {
+        float4 position        : POSITION;
+		float2 texCoord		   : TEXCOORD0;
+		float3 worldNormal     : TEXCOORD1;
+		float3 eyeVector 	   : TEXCOORD2;
+};
+
+
+// PROGRAM SECTION
+
+// Vertex Shader 
+v2f vShader(a2v In)
+{
+    v2f Out;
+	
+    Out.position = mul(WorldViewProjection, In.position);
+	Out.worldNormal = mul(WorldInverseTranspose, In.normal).xyz;
+	
+	float3 worldSpacePos = mul(World, In.position);
+	float3 worldCameraPos = float3(ViewInverse[0].w, ViewInverse[1].w, ViewInverse[2].w); 
+	Out.eyeVector = worldCameraPos - worldSpacePos;
+	
+    return Out;
+}
+
+// Pixel Shader 
+float4 pShader(v2f In) : COLOR
+{
+	float4 outColor;
+	
+	float3 worldNormal = normalize(In.worldNormal);
+	float3 lightDir = normalize(-lightDirection);  
+	float3 eyeVector = normalize(In.eyeVector);
+	float3 reflectionVector = -reflect(eyeVector, worldNormal);
+	
+	float3 cubeMap = texCUBE(reflectionMap,reflectionVector);
+	
+	float3 lambert = saturate(dot(lightDir, worldNormal));
+	
+	float rDotL = saturate(dot(reflectionVector, lightDir));
+	float3 specular = pow(rDotL, specularPower) * specularColor + pow(rDotL, specularPower2) * specularColor2;
+	
+	float3 fresnel = (pow(1- saturate(dot(eyeVector, worldNormal)), fresnelPower) * fresnelIntensity + fresnelOffset) * (lambert + ambientColor);
+	
+	float3 totalSpec = (fresnel * pow(cubeMap, reflectionContrast))  + specular;
+	
+	outColor.rgb = (lambert + ambientColor) * shaderColor + totalSpec;
+
+	outColor.a = 1.0f;
+	
+	
+	return outColor;
+}
+
+
+// TECHNIQUES SECTION
+
+technique Simple
+{
+    pass one
+    {
+		VertexShader = compile vp40 vShader();
+		PixelShader = compile fp40 pShader();
+    }
+}

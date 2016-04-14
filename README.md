@@ -18,3 +18,4 @@ Progression of shaders taken the lambert shader as base:
 - phong_vertex_anim.cgfx
 - diffuse_techniques.cgfx
 - blended.cgfx
+- carShader.cgfx
