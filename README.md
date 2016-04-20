@@ -16,7 +16,7 @@ Progression of shaders taken the lambert shader as base:
 - diffuse_specular_mapped.cgfx
 - diffuse_normal_mapped.cgfx
 
-![gif](http://imgur.com/9OPxLdK.gif)
+![gif](http://imgur.com/kRy3jmW.gif)
 - diffuse_cubemap.cgfx
 - diffuse_normal_UV_anim.cgfx
 - diffuse_normal_vertex_anim.cgfx
