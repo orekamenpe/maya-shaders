@@ -19,10 +19,10 @@ Progression of shaders taken the lambert shader as base:
 - diffuse_normal_UV_anim.cgfx
 - diffuse_normal_vertex_anim.cgfx
 - phong_vertex_anim.cgfx
-![gif](http://imgur.com/9OPxLdK.gif)
+![gif](http://i.imgur.com/9OPxLdK.gif)
 
 - diffuse_techniques.cgfx
-![gif](http://imgur.com/CrL3uHR.gif)
+![gif](http://i.imgur.com/CrL3uHR.gif)
 
 - blended.cgfx
 - carShader.cgfx
