@@ -11,7 +11,7 @@ Progression of shaders taken the lambert shader as base:
 - fresnel.cgfx
 - phong.cgfx
 
-![gif](http://imgur.com/SBVqWVU.gif)
+![gif](http://imgur.com/xbmgh4o.gif)
 - diffuse_mapped.cgfx
 - diffuse_specular_mapped.cgfx
 - diffuse_normal_mapped.cgfx
